@@ -341,12 +341,12 @@ class M3AEDataset(Dataset):
             self.train_txt = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/my_train_food.txt"
             self.test_txt = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/my_test_food.txt"
         elif args.dataset == "MVSA":
-            self.data_root = '/data1/zhangxiaohui/MVSA_Single/'
+            self.data_root = '/home/rifat/MMKD-Text/data/MVSA/'
             self.visual_feature_path = os.path.join(self.data_root, "visual", '{}_imgs/'.format(mode))
             self.text_feature_path = os.path.join(self.data_root, "text_token", '{}_token/'.format(mode))
-            self.stat_path = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/stat_mvsa.txt"
-            self.train_txt = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/my_train_mvsa.txt"
-            self.test_txt = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/my_test_mvsa.txt"
+            self.stat_path = "/home/rifat/MMKD-Text/data/MVSA/stat_mvsa.txt"
+            self.train_txt = "/home/rifat/MMKD-Text/data/MVSA/my_train_mvsa.txt"
+            self.test_txt = "/home/rifat/MMKD-Text/data/MVSA/my_test_mvsa.txt"
         elif args.dataset == "CUB":
             self.data_root = '/data1/zhangxiaohui/CUB_200_2011/'
             self.visual_feature_path = os.path.join(self.data_root, "visual", '{}_imgs/'.format(mode))

@@ -163,14 +163,14 @@ class M3AEClassifier(nn.Module):
         # model_config = ConfigDict(dict(model_type='large')) 
         self.mae_a = M3AE(text_vocab_size = 30522, config_updates = model_config)
         self.mae_v = M3AE(text_vocab_size = 30522, config_updates = model_config)
-        m3ae_ckpt_audio = "/path/to/m3ae_base_audio.pth"
-        m3ae_ckpt_visual = "/path/to/m3ae_base_visual.pth"
+        # m3ae_ckpt_audio = "/path/to/m3ae_base_audio.pth"
+        # m3ae_ckpt_visual = "/path/to/m3ae_base_visual.pth"
         # m3ae_ckpt = "/path/to/m3ae_large.pth"
-        device = torch.device('cuda:0')
-        sdA_audio = torch.load(m3ae_ckpt_audio, map_location=device)
-        miss, unexcepted = self.mae_a.load_state_dict(sdA_audio, strict=False)
-        sdA_visual = torch.load(m3ae_ckpt_visual, map_location=device)
-        miss, unexcepted = self.mae_v.load_state_dict(sdA_visual, strict=False)
+        # device = torch.device('cuda:0')
+        # sdA_audio = torch.load(m3ae_ckpt_audio, map_location=device)
+        # miss, unexcepted = self.mae_a.load_state_dict(sdA_audio, strict=False)
+        # sdA_visual = torch.load(m3ae_ckpt_visual, map_location=device)
+        # miss, unexcepted = self.mae_v.load_state_dict(sdA_visual, strict=False)
 
         if args.modulation == "QMF":
             self.audio_fc = nn.Linear(768, n_classes)

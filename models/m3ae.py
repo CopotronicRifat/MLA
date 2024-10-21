@@ -59,7 +59,7 @@ class DropPath(nn.Module):
         random_tensor = keep_prob + torch.rand(shape, dtype=torch.float32)
         random_tensor = random_tensor.floor()
         random_tensor = random_tensor.to(torch.device('cuda:0'))
-        # return input.div(keep_prob) * random_tensor
+        return input.div(keep_prob) * random_tensor
 
 
 class TransformerMLP(nn.Module):
