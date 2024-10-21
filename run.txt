@@ -1,2 +1,2 @@
-  python main.py --train --ckpt_path ckpt --gpu_ids 1 --batch_size 64 --lorb m3ae --modulation Normal --epochs 100 --learning_rate 0.001 --lr_decay_step 70 --lr_decay_ratio 0.1 --dataset MVSA --gs_flag --dynamic
+  python main.py --train --ckpt_path ckpt --gpu_ids 1 --batch_size 16 --lorb m3ae --modulation Normal --epochs 100 --learning_rate 0.001 --lr_decay_step 70 --lr_decay_ratio 0.1 --dataset MVSA --gs_flag --dynamic
   python main.py --train --ckpt_path ckpt --gpu_ids 2 --batch_size 64 --lorb m3ae --modulation Normal --epochs 5 --learning_rate 0.001 --lr_decay_step 70 --lr_decay_ratio 0.1 --dataset MVSA --gs_flag --dynamic
