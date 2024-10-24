@@ -14,14 +14,15 @@ if __name__ == "__main__":
     
     tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
     
-    json_dir = "/data1/zhangxiaohui/food101/"
+    target_dir = "/home/rifat/MMKD-Text/data/FOOD101"
+    json_dir = "/home/rifat/MMKD-Text/data/FOOD101/data/meta"
 
-    text_target_dir = os.path.join(json_dir, "text_token")
+    text_target_dir = os.path.join(target_dir, "text_token")
     
     # img_source_dir = os.path.join(json_dir, "data")
-    img_target_dir = os.path.join(json_dir, "visual")
+    img_target_dir = os.path.join(target_dir, "visual")
 
-    all_jsonls = ["train.jsonl", "dev.jsonl", "test.jsonl"]
+    all_jsonls = ["train.json", "test.json"]
 
     for filename in all_jsonls:
 
@@ -32,7 +33,7 @@ if __name__ == "__main__":
         img_list = [json.loads(line)["img"] for line in open(json_path)]
 
         print("{} has {} files".format(filename, len(data_texts)))
-        datasub = filename.split(".jsonl")[0]
+        datasub = filename.split(".json")[0]
         
         for cap_index, caption in tqdm(enumerate(data_texts)):
             encoded_caption = tokenizer(

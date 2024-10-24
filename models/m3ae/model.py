@@ -368,9 +368,9 @@ class MaskedMultimodalAutoencoder(nn.Module):
 if __name__ == "__main__":
     # @title Choose model size and load pretrained weights 
 
-    model_type = 'large' #@param ["small", "base", "large"]
-    model_path = '/data1/zhangxiaohui/OGM-GE/m3ae_large.pkl'
-    model_config = ConfigDict(dict(model_type='large')) 
+    model_type = 'base' #@param ["small", "base", "large"]
+    model_path = '/home/rifat/MLA/models/m3ae/m3ae_base.pkl'
+    model_config = ConfigDict(dict(model_type='base')) 
     model = MaskedMultimodalAutoencoder(text_vocab_size = 30522, config_updates = model_config)
 
     # load Jax pretrained weights
@@ -454,3 +454,8 @@ if __name__ == "__main__":
     pdb.set_trace()
 
     print("Done!")
+
+        # Save the converted PyTorch model
+    torch.save(model.state_dict(), 'm3ae_base_pytorch.pth')
+    
+    print("JAX weights converted and saved as PyTorch model.")
