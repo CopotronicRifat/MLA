@@ -478,7 +478,126 @@ class M3AEDataset(Dataset):
         label = self.classes.index(self.data2class[av_file])
         
         return tokenizer, padding_mask, image, label, torch.LongTensor([idx])
-    
+
+
+class M3AEClipDataset(Dataset):
+
+    def __init__(self, args, mode='train'):
+        classes = []
+        data = []
+        data2class = {}
+        self.mode = mode
+        self.augnois = args.cav_augnois
+        self.dataset = args.dataset
+        
+        # Define the directories for CLIP or non-CLIP usage
+        if args.dataset == "Food101":
+            self.data_root = '/data1/zhangxiaohui/food101/'
+            self.visual_feature_path = os.path.join(self.data_root, "visual", '{}_imgs/'.format(mode))
+            self.text_feature_path = os.path.join(self.data_root, "text_token_clip", '{}_token/'.format(mode))
+            self.stat_path = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/stat_food.txt"
+            self.train_txt = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/my_train_food.txt"
+            self.test_txt = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/my_test_food.txt"
+        elif args.dataset == "MVSA":
+            self.data_root = '/home/rifat/MMKD-Text/data/MVSA/'
+            self.visual_feature_path = os.path.join(self.data_root, "visual", '{}_imgs/'.format(mode))
+            self.text_feature_path = os.path.join(self.data_root, "text_token_clip", '{}_token/'.format(mode))
+            self.stat_path = "/home/rifat/MMKD-Text/data/MVSA/stat_mvsa.txt"
+            self.train_txt = "/home/rifat/MMKD-Text/data/MVSA/my_train_mvsa.txt"
+            self.test_txt = "/home/rifat/MMKD-Text/data/MVSA/my_test_mvsa.txt"
+        elif args.dataset == "CUB":
+            self.data_root = '/data1/zhangxiaohui/CUB_200_2011/'
+            self.visual_feature_path = os.path.join(self.data_root, "visual", '{}_imgs/'.format(mode))
+            self.text_feature_path = os.path.join(self.data_root, "text_token_clip", '{}_token/'.format(mode))
+            self.stat_path = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/stat_cub.txt"
+            self.train_txt = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/my_train_cub.txt"
+            self.test_txt = "/data1/zhangxiaohui/Multimodal-Learning-Adaptation/data/my_test_cub.txt"
+
+        with open(self.stat_path, "r") as f1:
+            classes = f1.readlines()
+        
+        classes = [sclass.strip() for sclass in classes]
+
+        if mode == 'train':
+            csv_file = self.train_txt
+        elif mode == 'test':
+            csv_file = self.test_txt
+
+        with open(csv_file, "r") as f2:
+            csv_reader = f2.readlines()
+            for single_line in csv_reader:
+                item = single_line.strip().split(".jpg ")
+                token_path = os.path.join(self.text_feature_path, item[0] + '_token.npy')
+                if args.dataset == "MVSA" or args.dataset == "Food101" or args.dataset == "CUB":
+                    visual_path = os.path.join(self.visual_feature_path, item[0] + ".jpg")    
+                else:
+                    visual_path = os.path.join(self.visual_feature_path, item[0])
+
+                if os.path.exists(token_path) and os.path.exists(visual_path):
+                    data.append(item[0])
+                    data2class[item[0]] = item[1]
+                else:
+                    continue
+
+        self.classes = sorted(classes)
+        print(self.classes)
+        self.data2class = data2class
+        self.av_files = []
+        for item in data:
+            self.av_files.append(item)
+
+        print('# of files = %d ' % len(self.av_files))
+        print('# of classes = %d' % len(self.classes))
+
+        # CLIP requires 224x224 image size
+        self.preprocess_train = transforms.Compose([
+            transforms.Resize(224, interpolation=Image.BICUBIC),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        self.preprocess_test = transforms.Compose([
+            transforms.Resize(224, interpolation=Image.BICUBIC),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+
+    def __len__(self):
+        return len(self.av_files)
+
+    def get_image(self, filename, filename2=None, mix_lambda=1):
+        img = Image.open(filename)
+        if self.mode == "train":
+            image_tensor = self.preprocess_train(img)
+        elif self.mode == "test":
+            image_tensor = self.preprocess_test(img)
+        return image_tensor
+
+    def __getitem__(self, idx):
+        av_file = self.av_files[idx]
+
+        # Text (if CLIP is used, no padding mask)
+        token_path = os.path.join(self.text_feature_path, av_file + '_token.npy')
+        tokenizer = np.load(token_path)
+        tokenizer = torch.tensor(tokenizer)
+
+        # Visual
+        if self.dataset == "MVSA" or self.dataset == "Food101" or self.dataset == "CUB":
+            image = self.get_image(os.path.join(self.visual_feature_path, av_file + ".jpg"))
+        else:
+            visual_path = os.path.join(self.visual_feature_path, av_file)
+            allimages = os.listdir(visual_path)
+            file_num = len(allimages)
+            image = self.get_image(os.path.join(visual_path, allimages[int(file_num / 2)]))
+
+        padding_mask = torch.zeros(1)  # No padding mask for CLIP. So, a place-holder
+
+        label = self.classes.index(self.data2class[av_file])
+
+        return tokenizer, padding_mask, image, label, torch.LongTensor([idx])
+
+
 class TVDataset(Dataset):
 
     def __init__(self, args, mode='train'):

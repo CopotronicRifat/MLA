@@ -8,9 +8,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-import pdb
-
-from dataset.dataset import AVDataset, CAVDataset, M3AEDataset, TVDataset, Modal3Dataset, CLIPDataset
+from dataset.dataset import AVDataset, CAVDataset, M3AEDataset, TVDataset, Modal3Dataset, CLIPDataset, M3AEClipDataset
 from models.basic_model import AVClassifier, CAVClassifier, M3AEClassifier, Modal3Classifier, CLIPClassifier
 from utils.utils import setup_seed, weight_init, GSPlugin, History
 import datetime
@@ -58,6 +56,7 @@ def get_arguments():
     parser.add_argument('--t_alpha', default=0.4, type=float, help='textual alpha in 3 modal GS')
     parser.add_argument('--clip', action='store_true', help='run using clip pre-trained feature')
     parser.add_argument('--ckpt_load_path_train', default = None, type=str, help='loaded path when training')
+    parser.add_argument('--image_encoder_name', default = 'RN50', type=str, help='ViT-B/32 or RN50')
     
 
     return parser.parse_args()
@@ -429,6 +428,8 @@ def train_epoch(args, epoch, model, device, dataloader, optimizer, scheduler,
                     a, v = model(spec, image)
                 else:
                     a, v = model(spec.unsqueeze(1).float(), image.float())
+            
+            a = a.to(torch.float32)
             out_a = model.module.fusion_module.fc_out(a)
             
             loss_a = criterion(out_a, label)
@@ -441,6 +442,7 @@ def train_epoch(args, epoch, model, device, dataloader, optimizer, scheduler,
 
             gs_plugin.exp_count += 1
             
+            v = v.to(torch.float32)
             out_v = model.module.fusion_module.fc_out(v)
             
             loss_v = criterion(out_v, label)
@@ -632,7 +634,9 @@ def valid(args, model, device, dataloader,
                         a, v = model(spec, image)
                     else:
                         a, v= model(spec.unsqueeze(1).float(), image.float())
-                    
+
+                a = a.to(torch.float32)
+                v = v.to(torch.float32)    
                 out_a = model.module.fusion_module.fc_out(a)
                 out_v = model.module.fusion_module.fc_out(v)
                 if args.modal3:
@@ -710,7 +714,10 @@ def main(av_alpha = 0.5):
         if args.modal3:
             model = Modal3Classifier(args)
         else:
-            model = M3AEClassifier(args)
+            if args.clip:
+                model = CLIPClassifier(args)
+            else:
+                model = M3AEClassifier(args)
     else:
         if args.clip:
             model = CLIPClassifier(args)
@@ -763,15 +770,19 @@ def main(av_alpha = 0.5):
         # Incomplete
         pass
     elif args.dataset == 'MVSA':
-        if args.lorb == "large":
-            train_dataset = CAVDataset(args, mode='train')
-            test_dataset = CAVDataset(args, mode='test')
-        elif args.lorb == "m3ae":
-            train_dataset = M3AEDataset(args, mode='train')
-            test_dataset = M3AEDataset(args, mode='test')
+        if args.clip:
+            train_dataset = M3AEClipDataset(args, mode='train')
+            test_dataset = M3AEClipDataset(args, mode='test')
         else:
-            train_dataset = TVDataset(args, mode='train')
-            test_dataset = TVDataset(args, mode='test')
+            if args.lorb == "large":
+                train_dataset = CAVDataset(args, mode='train')
+                test_dataset = CAVDataset(args, mode='test')
+            elif args.lorb == "m3ae":
+                train_dataset = M3AEDataset(args, mode='train')
+                test_dataset = M3AEDataset(args, mode='test')
+            else:
+                train_dataset = TVDataset(args, mode='train')
+                test_dataset = TVDataset(args, mode='test')
     elif args.dataset == 'CUB':
         # Incomplete
         pass
@@ -793,8 +804,10 @@ def main(av_alpha = 0.5):
         test_dataset = Modal3Dataset(args, mode='test')
     elif args.dataset == 'Food101':
         if args.clip:
-            train_dataset = CLIPDataset(args, mode="train")
-            test_dataset = CLIPDataset(args, mode="test")
+            # train_dataset = CLIPDataset(args, mode="train")
+            # test_dataset = CLIPDataset(args, mode="test")
+            train_dataset = M3AEClipDataset(args, mode="train")
+            test_dataset = M3AEClipDataset(args, mode="test")
         else:
             if args.lorb == "large":
                 train_dataset = CAVDataset(args, mode='train')
@@ -908,11 +921,12 @@ def main(av_alpha = 0.5):
                 if not os.path.exists(args.ckpt_path):
                     os.mkdir(args.ckpt_path)
 
-                model_name = 'best_model_of_dataset_{}_{}_alpha_{}_' \
+                model_name = 'best_model_of_dataset_{}_{}_alpha_{}_img-enc_{}' \
                              'optimizer_{}_modulate_starts_{}_ends_{}_' \
                              'epoch_{}_acc_{}.pth'.format(args.dataset,
                                                           args.modulation,
                                                           args.alpha,
+                                                          args.image_encoder_name,
                                                           args.optimizer,
                                                           args.modulation_starts,
                                                           args.modulation_ends,

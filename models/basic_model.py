@@ -5,9 +5,8 @@ from .backbone import resnet18
 from .fusion_modules import SumFusion, ConcatFusion, FiLM, GatedFusion, ConcatFusion3
 from .cav_mae import CAVMAEFT
 from .m3ae import MaskedMultimodalAutoencoder as M3AE
-import pickle
-import pdb
 import einops
+import clip
 from ml_collections import ConfigDict
 # import fairseq
 
@@ -275,6 +274,50 @@ class Modal3Classifier(nn.Module):
         return a, v, t
 
 
+# class CLIPClassifier(nn.Module):
+#     def __init__(self, args):
+#         super(CLIPClassifier, self).__init__()
+
+#         fusion = args.fusion_method
+#         if args.dataset == 'MVSA':
+#             n_classes = 3
+#         elif args.dataset == 'KineticSound':
+#             pass
+#         elif args.dataset == 'Food101':
+#             n_classes = 101
+#         elif args.dataset == 'CREMAD':
+#             n_classes = 6
+#         elif args.dataset == 'CUB':
+#             pass
+#         else:
+#             raise NotImplementedError('Incorrect dataset name {}'.format(args.dataset))
+
+#         if fusion == 'sum':
+#             self.fusion_module = SumFusion(output_dim=n_classes)
+#         elif fusion == 'concat':
+#             if args.gs_flag:
+#                 self.fusion_module = ConcatFusion(input_dim = 512, output_dim=n_classes)
+#             else:
+#                 self.fusion_module = ConcatFusion(input_dim = 1024, output_dim=n_classes)
+#         elif fusion == 'film':
+#             pass
+#         elif fusion == 'gated':
+#             pass
+#         else:
+#             raise NotImplementedError('Incorrect fusion method: {}!'.format(fusion))
+        
+#         self.args = args
+
+        
+#     def forward(self, token, visual):
+#         token = token.squeeze(1)
+#         visual = visual.squeeze(1)
+#         if not self.args.gs_flag:
+#             a, v, out = self.fusion_module(token, visual)
+#             return a, v, out
+#         return token, visual
+
+
 class CLIPClassifier(nn.Module):
     def __init__(self, args):
         super(CLIPClassifier, self).__init__()
@@ -297,9 +340,12 @@ class CLIPClassifier(nn.Module):
             self.fusion_module = SumFusion(output_dim=n_classes)
         elif fusion == 'concat':
             if args.gs_flag:
-                self.fusion_module = ConcatFusion(input_dim = 512, output_dim=n_classes)
+                if args.image_encoder_name == 'ViT-B/32':
+                    self.fusion_module = ConcatFusion(input_dim=512, output_dim=n_classes)
+                elif args.image_encoder_name == 'RN50':
+                    self.fusion_module = ConcatFusion(input_dim=1024, output_dim=n_classes)
             else:
-                self.fusion_module = ConcatFusion(input_dim = 1024, output_dim=n_classes)
+                self.fusion_module = ConcatFusion(input_dim=1024, output_dim=n_classes)
         elif fusion == 'film':
             pass
         elif fusion == 'gated':
@@ -307,16 +353,24 @@ class CLIPClassifier(nn.Module):
         else:
             raise NotImplementedError('Incorrect fusion method: {}!'.format(fusion))
         
+        self.clip_model, _ = clip.load(args.image_encoder_name, device="cuda" if torch.cuda.is_available() else "cpu")
+        
+        if args.modulation == "QMF":
+            self.audio_fc = nn.Linear(512, n_classes)  # CLIP image and text outputs are 512-dim
+            self.visual_fc = nn.Linear(512, n_classes)
+        
         self.args = args
 
-        
-    def forward(self, token, visual):
+    def forward(self, token, padding_mask, visual):
+        # Tokenize text using CLIP's tokenizer (convert token to CLIP's expected input format)
         token = token.squeeze(1)
-        visual = visual.squeeze(1)
-        if not self.args.gs_flag:
-            a, v, out = self.fusion_module(token, visual)
-            return a, v, out
-        return token, visual
-
-
-
+        token_features = self.clip_model.encode_text(token)
+        
+        # Encode image using CLIP
+        visual_features = self.clip_model.encode_image(visual)
+        
+        if self.args.modulation == "QMF":
+            token_features = self.audio_fc(token_features)
+            visual_features = self.visual_fc(visual_features)
+        
+        return token_features, visual_features
