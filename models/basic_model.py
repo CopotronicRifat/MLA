@@ -340,7 +340,7 @@ class CLIPClassifier(nn.Module):
             self.fusion_module = SumFusion(output_dim=n_classes)
         elif fusion == 'concat':
             if args.gs_flag:
-                if args.image_encoder_name == 'ViT-B/32':
+                if args.image_encoder_name == 'ViT-B':
                     self.fusion_module = ConcatFusion(input_dim=512, output_dim=n_classes)
                 elif args.image_encoder_name == 'RN50':
                     self.fusion_module = ConcatFusion(input_dim=1024, output_dim=n_classes)
@@ -353,8 +353,11 @@ class CLIPClassifier(nn.Module):
         else:
             raise NotImplementedError('Incorrect fusion method: {}!'.format(fusion))
         
-        self.clip_model, _ = clip.load(args.image_encoder_name, device="cuda" if torch.cuda.is_available() else "cpu")
-        
+        if args.image_encoder_name == 'ViT-B':
+            self.clip_model, _ = clip.load('ViT-B/32', device="cuda" if torch.cuda.is_available() else "cpu")
+        elif args.image_encoder_name == 'RN50':
+            self.clip_model, _ = clip.load('RN50', device="cuda" if torch.cuda.is_available() else "cpu")
+
         if args.modulation == "QMF":
             self.audio_fc = nn.Linear(512, n_classes)  # CLIP image and text outputs are 512-dim
             self.visual_fc = nn.Linear(512, n_classes)

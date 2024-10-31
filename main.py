@@ -56,7 +56,7 @@ def get_arguments():
     parser.add_argument('--t_alpha', default=0.4, type=float, help='textual alpha in 3 modal GS')
     parser.add_argument('--clip', action='store_true', help='run using clip pre-trained feature')
     parser.add_argument('--ckpt_load_path_train', default = None, type=str, help='loaded path when training')
-    parser.add_argument('--image_encoder_name', default = 'RN50', type=str, help='ViT-B/32 or RN50')
+    parser.add_argument('--image_encoder_name', default = 'RN50', type=str, help='ViT-B or RN50')
     
 
     return parser.parse_args()
